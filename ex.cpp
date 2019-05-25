@@ -4,27 +4,11 @@
 #include <cmath>
 ILOSTLBEGIN
 
-const int Veg_Beg = 1;
-const int Veg_End = 2;
-const int Nvg_Beg = 3;
-const int Nvg_End = 5;
-const int Oil_Beg = 1;
-const int Oil_End = 5;
-const int Month_Beg = 1;
-const int Month_End = 6;
-const int XMonth_Beg = 0;
-const int XMonth_End = 6;
+const int MAX_DEPTH = 3;
+int max_nodes;
+int max_nors;
 
-const int NOR_GATE = -1;
-const int ZERO_INPUT = 0;
-const int NOT_VALID = -2;
-const int MAX_DEPTH = 6;
-
-int depth;
-int max_nodes = int(pow(2, depth)) - 1;
-int max_nors = int(pow(2, depth + 1)) - 1;
-
-int* initializeInputs(int inputs[], int size, int num_inputs)
+int *initializeInputs(int inputs[], int size, int num_inputs)
 {
   int value = 0;
   int permutation = int(pow(2, num_inputs - 1));
@@ -56,8 +40,13 @@ IloNumVarArray SOLUTION;
 IloNumVarArray IS_NOR;
 IloNumVar solution(int i) { return SOLUTION[i]; }
 IloNumVar isNor(int i) { return IS_NOR[i]; }
-IloNumVar leftChild(int i) { return SOLUTION[2 * i + 1]; }
-IloNumVar rightChild(int i) { return SOLUTION[2 * i + 2]; }
+IloNumVar leftChild(int i)
+{
+  return SOLUTION[2 * i + 1];
+}
+IloNumVar rightChild(int i) {
+  return SOLUTION[2 * i + 2];
+}
 
 /**
  * Perform NOR operation between two nodes.
@@ -71,20 +60,25 @@ IloNumVar rightChild(int i) { return SOLUTION[2 * i + 2]; }
 //   return result;
 // }
 
-// void printSolution(int solution[], int index){
-//   cout << index+1 << " ";
-//   if(solution[index] == -1){
-//     cout << -1 << " ";
-//     int left = 2*index+1;
-//     cout << left +1 << " ";
-//     int right = 2*index+2;
-//     cout << right +1 << endl;
-//     printSolution(solution, left);
-//     printSolution(solution, right);
-//   } else {
-//     cout << solution[index] << " " << 0 << " " << 0 << endl;
-//   }
-// }
+void printSolution(IloCplex cplex, IloNumArray solution, int index){
+  cout << index + 1 << " ";
+  if(solution[index] == -1){
+    cout << -1 << " ";
+    int left = 2 * index + 1;
+    cout << left + 1 << " ";
+    int right = 2 * index + 2;
+    printSolution(cplex, solution, left);
+    printSolution(cplex, solution, right);
+  } else {
+    cout << solution[index] << " " << 0 << " " << 0 << endl;
+  }
+}
+
+void printArray(IloNumArray array){
+  for(int i = 0; i< array.getSize(); ++i){
+    cout << array[i] << " ";
+  }
+}
 
 int main()
 {
@@ -104,76 +98,60 @@ int main()
   int size = (num_inputs + 1) * int(pow(2, num_inputs));
   int a[size];
 
-  int* inputs = initializeInputs(a, size, num_inputs);
+  int *inputs = initializeInputs(a, size, num_inputs);
+  int lower;
+  int upper;
 
-  // CONSTRAINTS AND ALL THOSE THINGS
+  // CONSTRAINTS
 
-  IloEnv env;
-  for (int i = 0; i < MAX_DEPTH; ++i)
+  for (int j = 0; j < MAX_DEPTH; ++j)
   {
+    IloEnv env;
     IloModel model(env);
+
+    max_nodes = int(pow(2, j + 1)) - 1;
+    max_nors = int(pow(2, j)) - 1;
 
     // NumVarArrayInitialization
 
-    SOLUTION = IloNumVarArray(env, max_nodes, -1, num_inputs);
+    SOLUTION = IloNumVarArray(env, max_nodes, -1, num_inputs, ILOINT);
     IS_NOR = IloNumVarArray(env, max_nodes, 0, 1, ILOBOOL);
 
     for (int i = 0; i < max_nodes; ++i)
     {
-      // We impose that if sol[i] == -1 --> is_nor[i] == 1
-      model.add(isNor(i) - 1 >= -1 * (-1 - solution(i)));
-      model.add(isNor(i) - 1 <= 0);
 
-      // We impose that if isNor(i) == 0 <--> rightChild(i) == 0
-      // Upper bound of rightChild(i) - 0: max_nodes.
-      // Lower bound of rightChild(i) - 0: -1.
+      // The leaves, they must be != -1
+      for(int k = max_nors - 1; k < max_nodes; ++k){
+        model.add(isNor(i) == 0);
+      }
+      // We impose that if is_nor[i] == 1 <--> sol[i] == -1
+      upper = num_inputs + 1;
+      lower = 0;
 
       // Right implication
-      model.add(rightChild(i) >= (-1) * isNor(i));
-      model.add(rightChild(i) <= max_nodes * isNor(i));
+      model.add(solution(i) + 1 <= upper*(1 - isNor(i)));
+      model.add(solution(i) + 1 >= 0);
 
       // Left implication
+      model.add(solution(i) >= (-isNor(i)));
 
+      // if(2 * i + 1 < max_nodes){
+      //   // We impose that if isNor(i) == 0 --> rightChild(i) == 0
+      //   // Upper bound of rightChild(i) - 0: max_nodes.
+      //   // Lower bound of rightChild(i) - 0: -1.
 
-      // And in the same way if isNor(i) == 0 <--> leftChild(i) == 0
+      //   // Right implication
+      //   model.add(rightChild(i) >= (-1 * isNor(i)));
+      //   model.add(rightChild(i) <= (max_nodes * isNor(i)));
 
-      // Right impication
-      model.add(leftChild(i) >= (-1) * isNor(i));
-      model.add(leftChild(i) <= max_nodes * isNor(i));
+      //   // And in the same way if isNor(i) == 0 --> leftChild(i) == 0
 
-      // Left implication
+      //   // Right impication
+      //   model.add(leftChild(i) >= (-1) * isNor(i));
+      //   model.add(leftChild(i) <= max_nodes * isNor(i));
+      // }
     }
-
-    // for (int m = Month_Beg; m <= Month_End; ++m)
-    // {
-    //   IloExpr expr1(env);
-    //   for (int o = Oil_Beg; o <= Oil_End; ++o)
-    //     expr1 += u(o, m);
-    //   model.add(expr1 == p(m));
-    //   expr1.end();
-
-    //   IloExpr expr2(env);
-    //   for (int o = Oil_Beg; o <= Oil_End; ++o)
-    //     expr2 += h[o] * u(o, m);
-    //   model.add(expr2 <= hub * p(m));
-    //   model.add(expr2 >= hlb * p(m));
-    //   expr2.end();
-
-    //   IloExpr expr3(env);
-    //   for (int o = Veg_Beg; o <= Veg_End; ++o)
-    //     expr3 += u(o, m);
-    //   model.add(expr3 <= uup[Veg_Beg]);
-    //   expr3.end();
-
-    //   IloExpr expr4(env);
-    //   for (int o = Nvg_Beg; o <= Nvg_End; ++o)
-    //     expr4 += u(o, m);
-    //   model.add(expr4 <= uup[Nvg_Beg]);
-    //   expr4.end();
-    // }
-
     // Objective function
-
     IloExpr obj(env);
 
     for (int m = 0; m < max_nodes; ++m)
@@ -193,7 +171,9 @@ int main()
     IloNumArray v(env);
     cplex.getValues(v, SOLUTION);
 
-    // printSolution(cplex, v, 0);
+    // printArray(v);
+
+    printSolution(cplex, v, 0);
+    env.end();
   }
-  env.end();
 }
