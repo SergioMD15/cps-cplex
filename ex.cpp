@@ -125,10 +125,10 @@ int main()
       }
 
       // We impose that if is_nor[i] == 1 <--> sol[i] == -1
-      upper = num_inputs + 1;
-      lower = 0;
+      // Upper bound of sol[i] + 1: num_inputs + 1
+      // Lower bound of sol[i] + 1: 0
       // Right implication
-      model.add(solution(i) + 1 <= upper*(1 - isNor(i)));
+      model.add(solution(i) + 1 <= (num_inputs + 1)*(1 - isNor(i)));
       model.add(solution(i) + 1 >= 0);
       // Left implication
       model.add(solution(i) >= (-isNor(i)));
