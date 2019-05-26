@@ -119,37 +119,35 @@ int main()
 
     for (int i = 0; i < max_nodes; ++i)
     {
-
-      // The leaves, they must be != -1
+      // The leaves of the tree must be != -1
       for(int k = max_nors - 1; k < max_nodes; ++k){
         model.add(isNor(i) == 0);
       }
+
       // We impose that if is_nor[i] == 1 <--> sol[i] == -1
       upper = num_inputs + 1;
       lower = 0;
-
       // Right implication
       model.add(solution(i) + 1 <= upper*(1 - isNor(i)));
       model.add(solution(i) + 1 >= 0);
-
       // Left implication
       model.add(solution(i) >= (-isNor(i)));
 
-      // if(2 * i + 1 < max_nodes){
-      //   // We impose that if isNor(i) == 0 --> rightChild(i) == 0
-      //   // Upper bound of rightChild(i) - 0: max_nodes.
-      //   // Lower bound of rightChild(i) - 0: -1.
+      if(2 * i + 1 < max_nodes){
+        // We impose that if isNor(i) == 0 --> rightChild(i) == 0
+        // Upper bound of rightChild(i) - 0: max_nodes.
+        // Lower bound of rightChild(i) - 0: -1.
 
-      //   // Right implication
-      //   model.add(rightChild(i) >= (-1 * isNor(i)));
-      //   model.add(rightChild(i) <= (max_nodes * isNor(i)));
+        // Right implication
+        model.add(rightChild(i) >= (-1 * isNor(i)));
+        model.add(rightChild(i) <= (max_nodes * isNor(i)));
 
-      //   // And in the same way if isNor(i) == 0 --> leftChild(i) == 0
+        // And in the same way if isNor(i) == 0 --> leftChild(i) == 0
 
-      //   // Right impication
-      //   model.add(leftChild(i) >= (-1) * isNor(i));
-      //   model.add(leftChild(i) <= max_nodes * isNor(i));
-      // }
+        // Right impication
+        model.add(leftChild(i) >= (-1) * isNor(i));
+        model.add(leftChild(i) <= max_nodes * isNor(i));
+      }
     }
     // Objective function
     IloExpr obj(env);
