@@ -135,18 +135,20 @@ int main()
 
       if(2 * i + 1 < max_nodes){
         // We impose that if isNor(i) == 0 --> rightChild(i) == 0
-        // Upper bound of rightChild(i) - 0: max_nodes.
+        // Upper bound of rightChild(i) - 0: num_inputs.
         // Lower bound of rightChild(i) - 0: -1.
 
         // Right implication
         model.add(rightChild(i) >= (-1 * isNor(i)));
-        model.add(rightChild(i) <= (max_nodes * isNor(i)));
+        model.add(rightChild(i) <= (num_inputs * isNor(i)));
 
         // And in the same way if isNor(i) == 0 --> leftChild(i) == 0
+        // Upper bound of leftChild(i) - 0: num_inputs.
+        // Lower bound of leftChild(i) - 0: -1.
 
         // Right impication
-        model.add(leftChild(i) >= (-1) * isNor(i));
-        model.add(leftChild(i) <= max_nodes * isNor(i));
+        model.add(leftChild(i) >= (-1 * isNor(i)));
+        model.add(leftChild(i) <= num_inputs * isNor(i));
       }
     }
     // Objective function
