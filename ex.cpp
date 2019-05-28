@@ -4,7 +4,6 @@
 #include <cmath>
 ILOSTLBEGIN
 
-const int MAX_DEPTH = 3;
 int max_nodes;
 int max_nors;
 
@@ -40,25 +39,8 @@ IloNumVarArray SOLUTION;
 IloNumVarArray IS_NOR;
 IloNumVar solution(int i) { return SOLUTION[i]; }
 IloNumVar isNor(int i) { return IS_NOR[i]; }
-IloNumVar leftChild(int i)
-{
-  return SOLUTION[2 * i + 1];
-}
-IloNumVar rightChild(int i) {
-  return SOLUTION[2 * i + 2];
-}
-
-/**
- * Perform NOR operation between two nodes.
- */
-// IloNumArray* norOperation(IloNumVarArray result, IloNumVarArray left, IloNumVarArray right)
-// {
-//   for (int i = 0; i < result.getSize(); ++i)
-//   {
-//     result[i] = (left[i] + right[i]);
-//   }
-//   return result;
-// }
+IloNumVar leftChild(int i){ return SOLUTION[2 * i + 1]; }
+IloNumVar rightChild(int i) { return SOLUTION[2 * i + 2]; }
 
 void printSolution(IloCplex cplex, IloNumArray solution, int index){
   cout << index + 1 << " ";
@@ -82,6 +64,8 @@ void printArray(IloNumArray array){
 
 int main()
 {
+
+  const int MAX_DEPTH = 4;
 
   // INPUTS AND INITIALIZING VARIABLES
 
@@ -170,8 +154,6 @@ int main()
 
     IloNumArray v(env);
     cplex.getValues(v, SOLUTION);
-
-    // printArray(v);
 
     printSolution(cplex, v, 0);
     env.end();
