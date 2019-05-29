@@ -37,10 +37,12 @@ int *initializeInputs(int inputs[], int size, int num_inputs)
 
 IloNumVarArray SOLUTION;
 IloNumVarArray IS_NOR;
+IloNumVarArray INPUTS_ASSOCIATION;
 IloNumVar solution(int i) { return SOLUTION[i]; }
 IloNumVar isNor(int i) { return IS_NOR[i]; }
 IloNumVar leftChild(int i){ return SOLUTION[2 * i + 1]; }
 IloNumVar rightChild(int i) { return SOLUTION[2 * i + 2]; }
+IloNumVar associated_input(int i, int j) { return INPUTS_ASSOCIATION[i + j]; }
 
 void printSolution(IloCplex cplex, IloNumArray solution, int index){
   cout << index + 1 << " ";
@@ -95,17 +97,47 @@ int main()
 
     max_nodes = int(pow(2, j + 1)) - 1;
     max_nors = int(pow(2, j)) - 1;
+    int input_num = pow(2, num_inputs);
 
     // NumVarArrayInitialization
 
     SOLUTION = IloNumVarArray(env, max_nodes, -1, num_inputs, ILOINT);
     IS_NOR = IloNumVarArray(env, max_nodes, 0, 1, ILOBOOL);
+    INPUTS_ASSOCIATION = IloNumVarArray(env, max_nodes * input_num, 0, 1, ILOBOOL);
 
     for (int i = 0; i < max_nodes; ++i)
     {
       // The leaves of the tree must be != -1
       for(int k = max_nors - 1; k < max_nodes; ++k){
         model.add(isNor(i) == 0);
+      }
+
+      // We impose that sol[i] = j --> associated_input(i,k) = inputs[j + k]
+      for(int j = 0; j < num_inputs; j++){
+        for(int k = 0; k < int(pow(2,num_inputs)); k++){
+          // For the inputs
+
+          // For NOR gates
+          if(2 * i + 1 < max_nodes){
+            int left_input = input_num * (2 * i + 1);
+            int right_input = input_num * (2 * i + 2); 
+
+            model.add(associated_input(left_input,k))
+                       + associated_input(right_input,k)
+                        <= 2 * (1 - associated_input(i,k));
+
+            model.add(associated_input(left_input,k))
+                       + associated_input(right_input,k) - 1
+                        >= -associated_input(i,k));
+            // model.add(associated_input(left_input,k)
+            //           + associated_input(right_input,k)
+            //             + 2 * associated_input(i,k) - 2 <= 0);
+
+            // model.add(associated_input(left_input,k)
+            //           + associated_input(right_input,k)
+            //             + associated_input(i,k) >= (1 - isNor(i)));
+          }
+        }
       }
 
       // We impose that if is_nor[i] == 1 <--> sol[i] == -1
